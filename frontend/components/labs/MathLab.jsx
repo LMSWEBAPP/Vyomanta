@@ -14,6 +14,18 @@ function preprocessLaTeX(text) {
     .replace(/(\\text\{[^}]+\})/g, '$$1$');
 }
 
+// Helper GCD function
+function calcGcd(a, b) {
+  a = Math.abs(Math.round(a || 0));
+  b = Math.abs(Math.round(b || 0));
+  while (b) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
+  return a || 1;
+}
+
 // Helper parser to dynamically extract slope, quadratic, or general expression parameters
 function parseMathEquation(rawEq, modeFromAI, paramsFromAI) {
   if (!rawEq) return { eqText: 'y = x + 1', mode: 'linear', a: 1, b: 0, c: 1, d: 0 };
@@ -143,6 +155,10 @@ function DynamicMathVisualizer({ spec }) {
               const arc1Path = `M ${cx},${cy} L ${cx + 45},${cy} A 45 45 0 0 0 ${cx + 45 * Math.cos(rad1)},${cy - 45 * Math.sin(rad1)} Z`;
               const arc2Path = `M ${cx},${cy} L ${cx + 45 * Math.cos(rad1)},${cy - 45 * Math.sin(rad1)} A 45 45 0 0 0 ${xRayTotal === cx ? cx : cx + 45 * Math.cos(radTotal)},${cy - 45 * Math.sin(radTotal)} Z`;
 
+              const common = calcGcd(angle1, angle2);
+              const r1 = Math.round(angle1 / common) || 1;
+              const r2 = Math.round(angle2 / common) || 4;
+
               return (
                 <g>
                   {/* Base rays */}
@@ -172,7 +188,7 @@ function DynamicMathVisualizer({ spec }) {
                     {angle1}° + {angle2}° = {totalAngle}° {totalAngle === 180 ? '(Supplementary)' : '(Complementary)'}
                   </text>
                   <text x={190} y={50} fill="#F59E0B" fontSize="11" textAnchor="middle">
-                    Ratio = {(angle1 / Math.gcd?.(angle1, angle2) || 1)}:{(angle2 / Math.gcd?.(angle1, angle2) || 4)}
+                    Ratio = {r1}:{r2}
                   </text>
                 </g>
               );
@@ -467,78 +483,104 @@ function DynamicMathVisualizer({ spec }) {
   );
 }
 
+// Safe React Error Boundary for Math components
+class SafeMathRenderer extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err) {
+    console.warn("[SafeMathRenderer Caught Error]:", err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ color: '#E5E7EB', fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.7, padding: 12 }}>
+          {this.props.fallback || this.props.children}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Custom Markdown Math Renderer with KaTeX & LaTeX support
 function CustomMathMarkdown({ content }) {
   const processed = preprocessLaTeX(content);
 
   return (
-    <div className="math-markdown-content" style={{ fontSize: 15, lineHeight: 1.8, color: '#E5E7EB' }}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          h3: ({ children }) => (
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#A78BFA', marginTop: 18, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: 6 }}>
-              <Zap size={16} /> {children}
-            </h3>
-          ),
-          h4: ({ children }) => (
-            <h4 style={{ fontSize: 15, fontWeight: 700, color: '#F472B6', marginTop: 14, marginBottom: 6 }}>
-              {children}
-            </h4>
-          ),
-          code: ({ inline, children }) => {
-            const str = String(children);
-            if (inline) {
+    <SafeMathRenderer fallback={<div style={{ whiteSpace: 'pre-wrap', color: '#E5E7EB' }}>{content}</div>}>
+      <div className="math-markdown-content" style={{ fontSize: 15, lineHeight: 1.8, color: '#E5E7EB' }}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[[rehypeKatex, { throwOnError: false, errorColor: '#F472B6' }]]}
+          components={{
+            h3: ({ children }) => (
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#A78BFA', marginTop: 18, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: 6 }}>
+                <Zap size={16} /> {children}
+              </h3>
+            ),
+            h4: ({ children }) => (
+              <h4 style={{ fontSize: 15, fontWeight: 700, color: '#F472B6', marginTop: 14, marginBottom: 6 }}>
+                {children}
+              </h4>
+            ),
+            code: ({ inline, children }) => {
+              const str = String(children);
+              if (inline) {
+                return (
+                  <span style={{
+                    fontFamily: 'monospace',
+                    background: 'rgba(139, 92, 246, 0.18)',
+                    color: '#F472B6',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: 14
+                  }}>
+                    {str}
+                  </span>
+                );
+              }
               return (
-                <span style={{
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                  borderRadius: 12,
+                  padding: '14px 20px',
+                  margin: '14px 0',
+                  textAlign: 'center',
+                  color: '#C4B5FD',
+                  fontWeight: 800,
+                  fontSize: 17,
                   fontFamily: 'monospace',
-                  background: 'rgba(139, 92, 246, 0.18)',
-                  color: '#F472B6',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
-                  padding: '2px 8px',
-                  borderRadius: 6,
-                  fontWeight: 700,
-                  fontSize: 14
+                  boxShadow: '0 4px 16px rgba(139, 92, 246, 0.2)'
                 }}>
                   {str}
-                </span>
-              );
-            }
-            return (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.4)',
-                borderRadius: 12,
-                padding: '14px 20px',
-                margin: '14px 0',
-                textAlign: 'center',
-                color: '#C4B5FD',
-                fontWeight: 800,
-                fontSize: 17,
-                fontFamily: 'monospace',
-                boxShadow: '0 4px 16px rgba(139, 92, 246, 0.2)'
-              }}>
-                {str}
-              </div>
-            );
-          },
-          p: ({ children }) => {
-            const str = String(children);
-            if (str.startsWith('Problem ') || str.startsWith('Step ')) {
-              return (
-                <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderLeft: '3px solid #8B5CF6', padding: '10px 14px', borderRadius: '0 8px 8px 0', margin: '10px 0' }}>
-                  {children}
                 </div>
               );
+            },
+            p: ({ children }) => {
+              const str = String(children);
+              if (str.startsWith('Problem ') || str.startsWith('Step ')) {
+                return (
+                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderLeft: '3px solid #8B5CF6', padding: '10px 14px', borderRadius: '0 8px 8px 0', margin: '10px 0' }}>
+                    {children}
+                  </div>
+                );
+              }
+              return <p style={{ margin: '8px 0' }}>{children}</p>;
             }
-            return <p style={{ margin: '8px 0' }}>{children}</p>;
-          }
-        }}
-      >
-        {processed}
-      </ReactMarkdown>
-    </div>
+          }}
+        >
+          {processed}
+        </ReactMarkdown>
+      </div>
+    </SafeMathRenderer>
   );
 }
 
@@ -1479,7 +1521,9 @@ export default function MathLab() {
 
                       {/* DYNAMIC TEXTBOOK VISUALIZER CANVAS */}
                       {parsedVisualSpec && (
-                        <DynamicMathVisualizer spec={parsedVisualSpec} />
+                        <SafeMathRenderer>
+                          <DynamicMathVisualizer spec={parsedVisualSpec} />
+                        </SafeMathRenderer>
                       )}
                     </div>
                   )}
