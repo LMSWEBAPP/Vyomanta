@@ -1465,40 +1465,6 @@ export default function CodingTutor() {
                         {/* HTML Tab Suggestions Container */}
                         {msg.activeFeature && (
                           <div data-feature-container="true" style={{ marginTop: 16, background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)' }}>
-                            {/* Tab Headers */}
-                            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, background: T.s2, overflowX: 'auto' }} className="no-scrollbar">
-                              {SUGGESTIONS.map(s => {
-                                const isTabActive = msg.activeFeature === s.id;
-                                const isGenerated = !!msg.features?.[s.id];
-                                return (
-                                  <button
-                                    key={s.id}
-                                    data-feature-button="true"
-                                    onClick={() => handleFeatureClick(mi, s.id)}
-                                    style={{
-                                      padding: '12px 18px',
-                                      background: isTabActive ? T.s1 : 'transparent',
-                                      border: 'none',
-                                      borderBottom: isTabActive ? `2px solid ${s.color}` : 'none',
-                                      color: isTabActive ? T.text : T.dim,
-                                      fontSize: 12.5,
-                                      fontWeight: 600,
-                                      cursor: 'pointer',
-                                      whiteSpace: 'nowrap',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 6,
-                                      transition: 'all 0.15s'
-                                    }}
-                                  >
-                                    <s.Icon size={13} color={isTabActive ? s.color : T.dim} />
-                                    <span>{s.label}</span>
-                                    {isGenerated && <span style={{ width: 4, height: 4, borderRadius: '50%', background: s.color }} />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
                             {/* Tab Content Panel */}
                             <div style={{ padding: 20 }}>
                               {msg.activeFeature === 'quiz' && (
