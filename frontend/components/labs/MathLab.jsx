@@ -1,8 +1,19 @@
 'use client';
 
-import 'katex/dist/katex.min.css';
+import React, { useState, useEffect, useRef, Component } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import {
+  Calculator, Edit3, Eraser, Trash2, RotateCcw, Play, Sparkles,
+  Sliders, Activity, HelpCircle, Compass, Zap, Lightbulb, ChevronRight,
+  TrendingUp, Circle, Triangle, Layers, ZoomIn, ZoomOut, RefreshCw, Send, Image as ImageIcon,
+  Crop, Mic, MicOff, Square, CheckCircle2, Award, Box, Volume2
+} from 'lucide-react';
+import { T } from '@/lib/lms-data';
 
 // Preprocess LaTeX math syntax into clean formatted KaTeX math
 function preprocessLaTeX(text) {
