@@ -68,7 +68,7 @@ export async function POST(request) {
 
     // Shuffle keys to distribute traffic across GEMINI_API_KEY, GEMINI_API_KEY_1, GEMINI_API_KEY_2, etc.
     const shuffledKeys = [...allKeys].sort(() => Math.random() - 0.5);
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
 
     let textResult = null;
     let lastError = null;
@@ -88,8 +88,8 @@ export async function POST(request) {
         if (data?.error) {
           lastError = data.error.message || 'API error';
           console.warn(`[Gemini] Key ${apiKey.slice(0, 8)}... notice (${modelName}): ${data.error.message}`);
-          // If rate limited or error, break model loop and switch to NEXT key immediately!
-          break;
+          // If model or key encounters an API error, continue to try the next model/key
+          continue;
         }
 
         const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
